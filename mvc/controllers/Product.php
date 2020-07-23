@@ -1,6 +1,6 @@
 <?
     class Product extends Connect {
-        function index() {
+        function index($start = 0) {
             // Show product data
             $servername = 'localhost';
             $username = 'root';
@@ -11,8 +11,37 @@
             if($conn->connect_error) {
                 die('Connection fail' . $connect_error);
             }
+
+            // Pagination
+            $sql_pagination = "SELECT ID FROM product";
+            $result_pagination = $conn->query($sql_pagination);
+            $page_total = $result_pagination->num_rows;
+            $page_limit = 2;
+            $page_number = ceil($page_total / $page_limit);
             
-            $sql = "SELECT * FROM product";
+            ($start == 0 || $start == 1) ? $active = 1 : $active = $start; // Add class active
+            
+            if($start == 0 || $start == 1) {
+                $giam = $tang = 1;
+            } else {
+                $giam = $tang = $start;
+            }
+
+            $str_pagination = '<li class="page-item"><a class="page-link" href="'.URL.'Product/index">«</a></li>';
+            $str_pagination .= '<li class="page-item"><a class="page-link" href="'.URL.'Product/index/'.($giam - 1).'"><</a></li>';
+            
+            for( $j = 1; $j <= $page_number; $j++) {
+                ($active == $j) ? $str_active = 'active' : $str_active = '';
+                $str_pagination .= '<li class="page-item '.$str_active.'"><a class="page-link" href="'.URL.'Product/index/'.$j.'">'.$j.'</a></li>';
+            }
+            
+            $str_pagination .= '<li class="page-item"><a class="page-link" href="'.URL.'Product/index/'.($tang + 1).'">></a></li>';
+            $str_pagination .= '<li class="page-item"><a class="page-link" href="'.URL.'Product/index/'.$page_number.'">»</a></li>';
+            
+            $changeView['pagination'] = $str_pagination;
+
+            ($start == 0 || $start == 1) ? $start = 0 : $start = ($start - 1) * $page_limit;
+            $sql = "SELECT * FROM product ORDER BY ID DESC LIMIT $start, $page_limit";
             $result = $conn->query($sql);
             $i = 0;
             $showProduct = '';
@@ -358,23 +387,15 @@
 
             if($flag == 1) {
                 // Send data to database
-                $servername = 'localhost';
-                $username = 'root';
-                $password = '';
-                $dbname = 'DTD';
-
-                $conn = new mysqli($servername, $username, $password, $dbname);
-                if($conn->connect_error) {
-                    die('Connection fail' . $connect_error);
-                }
-
-                $sql = "INSERT INTO product(name, link, image, content, status) VALUES ('".$name."', '".$link."', '".$image."', '".$content."', '".$status."')";
-                
-                if($conn->query($sql)) {
-                    echo 'Insert Successfully';
-                } else {
-                    echo 'Error: ' . $sql . '<br>' . $conn->error;
-                }
+                $db = $this->loadModel('ProductModel');
+                $arr = array(
+                    'name' => $name,
+                    'link' => $link,
+                    'image' => $image,
+                    'content' => $content,
+                    'status' => $status
+                );
+                $db->productInsert($arr);
             } else {
                 echo $err;
             }
